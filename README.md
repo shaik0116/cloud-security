@@ -1,0 +1,3 @@
+# devsecops
+.env
+.python
