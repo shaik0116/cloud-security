@@ -177,4 +177,8 @@ git push
 
 Then go to:
 ```
+<<<<<<< HEAD
 https://github.com/shaik0116/cloud-security
+=======
+https://github.com/shaik0116/cloud-security
+>>>>>>> ece84ab37ad5802395e1d229eafeb6412dfda177

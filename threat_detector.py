@@ -1,143 +1,118 @@
-import json
 import boto3
-from datetime import datetime
+import json
 
-# Connect to SNS to send email alerts
-sns = boto3.client('sns', region_name='eu-north-1')
+sns = boto3.client("sns", region_name="eu-north-1")
 
-# YOUR SNS TOPIC ARN — paste yours here from Notepad
-SNS_TOPIC_ARN = 'arn:aws:sns:eu-north-1:650251715192:security-alerts'
+SNS_TOPIC_ARN = "arn:aws:sns:eu-north-1:650251715192:security-alerts"
 
-# Suspicious API calls grouped by how dangerous they are
 ATTACK_SIGNATURES = {
-    'CRITICAL': [
-        'DeleteTrail',
-        'StopLogging',
-        'CreateUser',
-        'AttachUserPolicy',
-        'DeleteBucket',
-        'PutBucketPublicAccessBlock',
+    "CRITICAL": [
+        "DeleteTrail",
+        "StopLogging",
+        "CreateUser",
+        "AttachUserPolicy",
+        "DeleteBucket",
     ],
-    'HIGH': [
-        'ListUsers',
-        'ListBuckets',
-        'GetSecretValue',
-        'CreateAccessKey',
-        'DescribeInstances',
+    "HIGH": [
+        "ListUsers",
+        "ListBuckets",
+        "GetSecretValue",
+        "CreateAccessKey",
     ],
-    'MEDIUM': [
-        'ConsoleLogin',
-        'UpdateAccessKey',
-        'DeleteUser',
-        'DetachUserPolicy',
-    ]
+    "MEDIUM": [
+        "ConsoleLogin",
+        "UpdateAccessKey",
+        "DeleteUser",
+    ],
 }
 
-# Plain English explanation for each attack
 EXPLANATIONS = {
-    'DeleteTrail': 'Someone disabled CloudTrail logging. Attackers do this immediately to hide all future actions.',
-    'StopLogging': 'All AWS logging has been stopped. Attackers stop logging to become invisible.',
-    'CreateUser': 'A new IAM user was created. Attackers create backdoor accounts to keep access even after stolen credentials are revoked.',
-    'AttachUserPolicy': 'Admin permissions were attached to a user. This is privilege escalation.',
-    'DeleteBucket': 'An S3 bucket was deleted. Data may have been destroyed.',
-    'PutBucketPublicAccessBlock': 'S3 public access settings were changed. Private data may be exposed.',
-    'ListUsers': 'All IAM users were listed. This is reconnaissance — attacker mapping your account.',
-    'ListBuckets': 'All S3 buckets were listed. Attacker is finding where your data lives.',
-    'GetSecretValue': 'A secret was retrieved. Passwords or API keys may have been stolen.',
-    'CreateAccessKey': 'New access keys were created. Attacker creating persistent access credentials.',
-    'ConsoleLogin': 'Someone logged into AWS Console. Check if time and location are expected.',
-    'UpdateAccessKey': 'Access key status was changed. Someone is modifying credentials.',
-    'DeleteUser': 'An IAM user was deleted. Someone may be covering their tracks.',
-    'DetachUserPolicy': 'Permissions were removed from a user.',
+    "DeleteTrail": "Attacker disabled CloudTrail to hide their tracks.",
+    "StopLogging": "All AWS logging stopped. Attacker is becoming invisible.",
+    "CreateUser": "New IAM user created. Attacker creating backdoor account.",
+    "AttachUserPolicy": "Admin permissions attached. Privilege escalation detected.",
+    "DeleteBucket": "S3 bucket deleted. Data may have been destroyed.",
+    "ListUsers": "All IAM users listed. Attacker mapping your account.",
+    "ListBuckets": "All S3 buckets listed. Attacker looking for data.",
+    "GetSecretValue": "Secret retrieved. Passwords or API keys may be stolen.",
+    "CreateAccessKey": "New access keys created. Attacker creating persistent access.",
+    "ConsoleLogin": "Someone logged into AWS Console. Check if this is expected.",
+    "UpdateAccessKey": "Access key modified. Someone changing credentials.",
+    "DeleteUser": "IAM user deleted. Someone may be covering their tracks.",
 }
 
-def get_severity(event_name):
+
+def get_severity(event_name: str) -> str:
     for severity, actions in ATTACK_SIGNATURES.items():
         if event_name in actions:
             return severity
-    return 'LOW'
+    return "LOW"
 
-def get_explanation(event_name):
+
+def get_explanation(event_name: str) -> str:
     return EXPLANATIONS.get(
-        event_name,
-        f'The API call {event_name} was detected. Review if this action was expected.'
+        event_name, f"API call {event_name} detected. Review if this was expected."
     )
+
 
 def lambda_handler(event, context):
-    # Extract details from the CloudTrail event
-    detail     = event.get('detail', {})
-    event_name = detail.get('eventName', 'Unknown')
-    source_ip  = detail.get('sourceIPAddress', 'Unknown')
-    event_time = detail.get('eventTime', 'Unknown')
-    aws_region = detail.get('awsRegion', 'Unknown')
-    user_agent = detail.get('userAgent', 'Unknown')
+    detail = event.get("detail", {}) or {}
 
-    # Figure out WHO triggered this event
-    user_identity = detail.get('userIdentity', {})
-    identity_type = user_identity.get('type', 'Unknown')
+    event_name = detail.get("eventName", "Unknown")
+    source_ip = detail.get("sourceIPAddress", "Unknown")
+    event_time = detail.get("eventTime", "Unknown")
+    aws_region = detail.get("awsRegion", "Unknown")
+    user_agent = detail.get("userAgent", "Unknown")
 
-    if identity_type == 'IAMUser':
-        who = user_identity.get('userName', 'Unknown User')
-    elif identity_type == 'Root':
-        who = 'ROOT ACCOUNT'
-    elif identity_type == 'AssumedRole':
-        arn = user_identity.get('arn', '')
-        who = f"Role: {arn.split('/')[-1]}"
+    user_identity = detail.get("userIdentity", {}) or {}
+    identity_type = user_identity.get("type", "Unknown")
+
+    # Determine "who"
+    if identity_type == "IAMUser":
+        who = user_identity.get("userName", "Unknown")
+    elif identity_type == "Root":
+        who = "ROOT ACCOUNT"
+    elif identity_type == "AssumedRole":
+        arn = user_identity.get("arn", "") or ""
+        role_name = arn.split("/")[-1] if "/" in arn else arn
+        who = f"Role: {role_name or 'Unknown'}"
     else:
-        who = user_identity.get('arn', 'Unknown')
+        who = user_identity.get("arn") or user_identity.get("principalId") or "Unknown"
 
-    # Score severity
     severity = get_severity(event_name)
 
-    # Skip LOW severity events
-    if severity == 'LOW':
+    if severity == "LOW":
         print(f"Low severity {event_name} — skipping")
-        return {'statusCode': 200, 'body': 'Low severity skipped'}
+        return {"statusCode": 200, "body": "Low severity skipped"}
 
-    # Emoji for email subject
-    severity_emoji = {
-        'CRITICAL': '🚨',
-        'HIGH':     '⚠️',
-        'MEDIUM':   '📋'
-    }.get(severity, '📋')
+    severity_emoji = {"CRITICAL": "🚨", "HIGH": "⚠️", "MEDIUM": "📋"}.get(severity, "📋")
+    explanation = get_explanation(event_name)
 
-    # Build the alert email
+    # Build alert message (FIXED: properly closed string)
     alert_message = f"""
 {severity_emoji} AWS SECURITY ALERT — {severity}
-{'=' * 50}
+{'=' * 60}
+Event:      {event_name}
+Who:        {who} ({identity_type})
+Source IP:  {source_ip}
+Time:       {event_time}
+Region:     {aws_region}
+UserAgent:  {user_agent}
 
-WHAT HAPPENED:
-  Event:    {event_name}
-  Who:      {who}
-  From IP:  {source_ip}
-  When:     {event_time}
-  Region:   {aws_region}
+Why this matters:
+- {explanation}
 
-WHAT THIS MEANS:
-  {get_explanation(event_name)}
+Raw event (detail):
+{json.dumps(detail, indent=2)}
+""".strip()
 
-WHAT TO DO RIGHT NOW:
-  1. Log into AWS Console immediately
-  2. Go to CloudTrail and find this user
-  3. Check everything they did before and after
-  4. If suspicious — revoke their access keys:
-     aws iam update-access-key --access-key-id KEY --status Inactive --user-name {who}
-  5. If confirmed breach — change all credentials
+    subject = f"{severity} AWS Alert: {event_name}"
 
-CloudTrail:
-  https://console.aws.amazon.com/cloudtrail/home
-
-Your Automated AWS Security System
-{'=' * 50}
-"""
-
-    # Send alert to your email via SNS
-    sns.publish(
-        TopicArn=SNS_TOPIC_ARN,
-        Subject=f'{severity_emoji} AWS Alert — {severity}: {event_name} by {who}',
-        Message=alert_message
-    )
-
-    print(f"Alert sent: {severity} — {event_name} by {who} from {source_ip}")
-
-    return {'statusCode': 200, 'body': f'Alert sent for {event_name}'}
+    try:
+        resp = sns.publish(TopicArn=SNS_TOPIC_ARN, Subject=subject, Message=alert_message)
+        print(f"SNS published, MessageId={resp.get('MessageId')}")
+        return {"statusCode": 200, "body": "Alert sent"}
+    except Exception as e:
+        # Don't crash Lambda without a clear log message
+        print(f"ERROR publishing to SNS: {e}")
+        return {"statusCode": 500, "body": "Failed to send alert"}
