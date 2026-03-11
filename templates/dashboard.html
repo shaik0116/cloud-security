@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS Security Posture Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #0D1117; color: #E2E8F0; font-family: 'Segoe UI', sans-serif; }
+        .header { background: #161B22; padding: 20px 40px; border-bottom: 1px solid #30363D; display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { color: #00D4FF; font-size: 22px; }
+        .header .updated { color: #64748B; font-size: 13px; }
+        .container { padding: 30px 40px; }
+        .score-bar { background: #161B22; border-radius: 12px; padding: 30px; margin-bottom: 24px; display: flex; align-items: center; gap: 30px; border: 1px solid #30363D; }
+        .score-circle { width: 100px; height: 100px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: bold; border: 6px solid #00D4FF; color: #00D4FF; }
+        .score-info h2 { font-size: 18px; color: #E2E8F0; margin-bottom: 6px; }
+        .score-info p { color: #64748B; font-size: 13px; }
+        .progress-bar { flex: 1; background: #30363D; border-radius: 10px; height: 12px; overflow: hidden; }
+        .progress-fill { height: 100%; border-radius: 10px; background: linear-gradient(90deg, #00D4FF, #7C3AED); transition: width 1s ease; }
+        .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+        .card { background: #161B22; border-radius: 12px; padding: 24px; border: 1px solid #30363D; text-align: center; }
+        .card .number { font-size: 42px; font-weight: bold; margin-bottom: 6px; }
+        .card .label { font-size: 12px; color: #64748B; text-transform: uppercase; letter-spacing: 1px; }
+        .card.critical { border-top: 3px solid #EF4444; }
+        .card.critical .number { color: #EF4444; }
+        .card.high { border-top: 3px solid #F59E0B; }
+        .card.high .number { color: #F59E0B; }
+        .card.medium { border-top: 3px solid #3B82F6; }
+        .card.medium .number { color: #3B82F6; }
+        .card.passed { border-top: 3px solid #10B981; }
+        .card.passed .number { color: #10B981; }
+        .bottom { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        .panel { background: #161B22; border-radius: 12px; padding: 24px; border: 1px solid #30363D; }
+        .panel h3 { color: #00D4FF; margin-bottom: 16px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }
+        .finding { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-bottom: 1px solid #30363D; }
+        .finding:last-child { border-bottom: none; }
+        .badge { padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: bold; white-space: nowrap; }
+        .badge.CRITICAL { background: #EF444420; color: #EF4444; border: 1px solid #EF4444; }
+        .badge.HIGH { background: #F59E0B20; color: #F59E0B; border: 1px solid #F59E0B; }
+        .badge.MEDIUM { background: #3B82F620; color: #3B82F6; border: 1px solid #3B82F6; }
+        .badge.LOW { background: #10B98120; color: #10B981; border: 1px solid #10B981; }
+        .badge.PASSED { background: #10B98120; color: #10B981; border: 1px solid #10B981; }
+        .finding-title { font-size: 13px; color: #E2E8F0; }
+        .finding-meta { font-size: 11px; color: #64748B; margin-top: 3px; }
+        .refresh-btn { background: #00D4FF; color: #0D1117; border: none; padding: 8px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 13px; }
+        .refresh-btn:hover { background: #00B8D9; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>☁ AWS Security Posture Dashboard</h1>
+        <div style="display:flex;align-items:center;gap:16px">
+            <span class="updated" id="lastUpdated">Loading...</span>
+            <button class="refresh-btn" onclick="loadData()">↻ Refresh</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="score-bar">
+            <div class="score-circle" id="scoreCircle">--%</div>
+            <div class="score-info">
+                <h2>Overall Security Score</h2>
+                <p>Based on AWS Security Best Practices and CIS Benchmark controls</p>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill" style="width:0%"></div>
+            </div>
+        </div>
+
+        <div class="cards">
+            <div class="card critical">
+                <div class="number" id="criticalCount">-</div>
+                <div class="label">Critical</div>
+            </div>
+            <div class="card high">
+                <div class="number" id="highCount">-</div>
+                <div class="label">High</div>
+            </div>
+            <div class="card medium">
+                <div class="number" id="mediumCount">-</div>
+                <div class="label">Medium</div>
+            </div>
+            <div class="card passed">
+                <div class="number" id="passedCount">-</div>
+                <div class="label">Passed</div>
+            </div>
+        </div>
+
+        <div class="bottom">
+            <div class="panel">
+                <h3>Security Findings</h3>
+                <div id="findingsList"></div>
+            </div>
+            <div class="panel">
+                <h3>Findings By Severity</h3>
+                <canvas id="severityChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let chart = null;
+
+        async function loadData() {
+            const res = await fetch('/api/findings');
+            const data = await res.json();
+            const s = data.summary;
+
+            document.getElementById('scoreCircle').textContent = s.score + '%';
+            document.getElementById('progressFill').style.width = s.score + '%';
+            document.getElementById('criticalCount').textContent = s.critical;
+            document.getElementById('highCount').textContent = s.high;
+            document.getElementById('mediumCount').textContent = s.medium;
+            document.getElementById('passedCount').textContent = s.passed;
+            document.getElementById('lastUpdated').textContent = 'Last updated: ' + s.last_updated;
+
+            const list = document.getElementById('findingsList');
+            list.innerHTML = '';
+            data.findings.forEach(f => {
+                list.innerHTML += `
+                    <div class="finding">
+                        <span class="badge ${f.severity}">${f.severity}</span>
+                        <div>
+                            <div class="finding-title">${f.title}</div>
+                            <div class="finding-meta">${f.service} · ${f.region}</div>
+                        </div>
+                    </div>`;
+            });
+
+            if (chart) chart.destroy();
+            chart = new Chart(document.getElementById('severityChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Critical', 'High', 'Medium', 'Passed'],
+                    datasets: [{
+                        data: [s.critical, s.high, s.medium, s.passed],
+                        backgroundColor: ['#EF4444', '#F59E0B', '#3B82F6', '#10B981'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    plugins: { legend: { labels: { color: '#E2E8F0' } } },
+                    cutout: '65%'
+                }
+            });
+        }
+
+        loadData();
+        setInterval(loadData, 30000);
+    </script>
+</body>
+</html>
