@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS Security Audit Report</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #F5F7FA; color: #1C1C1E; }
+
+  .header { background: linear-gradient(135deg, #0D2137 0%, #1A7F8E 100%); color: white; padding: 40px; }
+  .header h1 { font-size: 28px; font-weight: 700; margin-bottom: 6px; }
+  .header p { font-size: 14px; opacity: 0.8; }
+
+  .container { max-width: 1100px; margin: 0 auto; padding: 30px 20px; }
+
+  .score-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 30px; }
+  .score-card { background: white; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  .score-card .number { font-size: 36px; font-weight: 700; }
+  .score-card .label { font-size: 12px; color: #666; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  .grade-card { background: #E8F5E9; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  .grade-card .number { font-size: 36px; font-weight: 700; color: #2E7D32; }
+
+  .section { background: white; border-radius: 12px; padding: 24px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  .section h2 { font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #0D2137; border-left: 4px solid #1A7F8E; padding-left: 12px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { background: #0D2137; color: white; padding: 10px 14px; text-align: left; font-weight: 600; }
+  td { padding: 10px 14px; border-bottom: 1px solid #F0F0F0; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #F9FAFB; }
+
+  .alert-box { border-radius: 8px; padding: 14px 18px; margin-bottom: 12px; font-size: 14px; }
+  .alert-critical { background: #FFEBEE; border-left: 4px solid #C62828; color: #C62828; }
+  .alert-warn { background: #FFF8E1; border-left: 4px solid #F57F17; color: #F57F17; }
+  .alert-pass { background: #E8F5E9; border-left: 4px solid #2E7D32; color: #2E7D32; }
+
+  .footer { text-align: center; color: #999; font-size: 12px; padding: 20px; }
+
+  .root-status { display: inline-block; padding: 8px 16px; border-radius: 8px; font-weight: 600; font-size: 14px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🔐 AWS Security Audit Report</h1>
+  <p>Account: 650251715192 &nbsp;|&nbsp; Region: eu-north-1 &nbsp;|&nbsp; Scanned: 2026-02-26 11:57:57</p>
+</div>
+
+<div class="container">
+
+  <!-- SCORE CARDS -->
+  <div class="score-grid">
+    <div class="grade-card">
+      <div class="number">A</div>
+      <div class="label">Security Grade</div>
+    </div>
+    <div class="score-card">
+      <div class="number" style="color:#1A7F8E;">100%</div>
+      <div class="label">Score</div>
+    </div>
+    <div class="score-card">
+      <div class="number" style="color:#2E7D32;">6</div>
+      <div class="label">Checks Passed</div>
+    </div>
+    <div class="score-card">
+      <div class="number" style="color:#C62828;">0</div>
+      <div class="label">Issues Found</div>
+    </div>
+  </div>
+
+  <!-- ALERTS -->
+  <div class="section">
+    <h2>⚡ Findings Summary</h2>
+
+    
+    
+    
+    
+    <div class="alert-box alert-warn">⚠️ MEDIUM: Bucket <b>aws-cloudtrail-logs-650251715192-7984d324</b> has no access logging</div>
+    
+
+    <div class="alert-box alert-pass">✅ All checks passed — account is secure</div>
+  </div>
+
+  <!-- IAM SECTION -->
+  <div class="section">
+    <h2>👤 IAM — Identity and Access Management</h2>
+
+    <p style="margin-bottom:12px;font-size:14px;">
+      Root Account MFA:
+      <span class="root-status" style="background:#E8F5E9;color:#2E7D32;">
+        ✅ Enabled
+      </span>
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Username</th>
+          <th>Created</th>
+          <th>MFA Status</th>
+          <th>Key Age</th>
+          <th>Key Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        
+    <tr>
+        <td>Security-Admin</td>
+        <td>2026-02-23</td>
+        <td><span style="background:#2E7D32;color:white;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:bold;">✅ PASS</span></td>
+        <td>2 days</td>
+        <td><span style="background:#2E7D32;color:white;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:bold;">✅ PASS</span></td>
+    </tr>
+    
+      </tbody>
+    </table>
+  </div>
+
+  <!-- S3 SECTION -->
+  <div class="section">
+    <h2>🪣 S3 — Simple Storage Service</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Bucket Name</th>
+          <th>Created</th>
+          <th>Public Access</th>
+          <th>Encryption</th>
+          <th>Logging</th>
+        </tr>
+      </thead>
+      <tbody>
+        
+        <tr>
+            <td>aws-cloudtrail-logs-650251715192-7984d324</td>
+            <td>2026-02-25</td>
+            <td><span style="background:#2E7D32;color:white;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:bold;">✅ PASS</span></td>
+            <td><span style="background:#2E7D32;color:white;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:bold;">✅ PASS</span> AES256</td>
+            <td><span style="background:#F57F17;color:white;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:bold;">⚠️ WARN</span></td>
+        </tr>
+        
+      </tbody>
+    </table>
+  </div>
+
+  <!-- WHAT TO DO -->
+  <div class="section">
+    <h2>🔧 Recommended Actions</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Priority</th>
+          <th>Action</th>
+          <th>How To Fix</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span style="color:#C62828;font-weight:bold;">Critical</span></td>
+          <td>Enable MFA on all IAM users</td>
+          <td>IAM → Users → Security credentials → Assign MFA device</td>
+        </tr>
+        <tr>
+          <td><span style="color:#C62828;font-weight:bold;">Critical</span></td>
+          <td>Block public access on all S3 buckets</td>
+          <td>S3 → Bucket → Permissions → Block public access → Edit → Enable all</td>
+        </tr>
+        <tr>
+          <td><span style="color:#F57F17;font-weight:bold;">High</span></td>
+          <td>Rotate access keys older than 90 days</td>
+          <td>IAM → Users → Security credentials → Create new key → Delete old key</td>
+        </tr>
+        <tr>
+          <td><span style="color:#F57F17;font-weight:bold;">Medium</span></td>
+          <td>Enable S3 access logging</td>
+          <td>S3 → Bucket → Properties → Server access logging → Enable</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<div class="footer">
+  Generated by AWS Security Audit Toolkit &nbsp;|&nbsp; 2026-02-26 11:57:57 &nbsp;|&nbsp; Built in Ireland 🇮🇪
+</div>
+
+</body>
+</html>
